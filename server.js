@@ -2,105 +2,80 @@ import express from 'express';
 import session from 'express-session';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
 import fs from 'fs';
 
-dotenv.config();
-
-const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-const VALID_USERS = {
-  [process.env.ADMIN_USER || 'admin']: process.env.ADMIN_PASSWORD || 'admin123'
-};
-
-app.use(express.urlencoded({ extended: true }));
+// ConfiguraciÃ³n bÃ¡sica
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'secret-key',
+  secret: 'donor-secret-key',
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24
+  cookie: { 
+    httpOnly: true, 
+    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: 'lax',
+    secure: false  // Render maneja HTTPS automÃ¡ticamente
   }
 }));
 
-const requireLogin = (req, res, next) => {
-  if (req.session?.user) {
-    next();
-  } else {
-    res.redirect('/login');
-  }
+// Credenciales
+const credentials = {
+  [process.env.ADMIN_USER || 'admin']: process.env.ADMIN_PASSWORD || 'admin123'
 };
 
-// Health check
-app.get('/api/status', (req, res) => {
-  res.json({ status: 'ok' });
-});
+// Middleware
+const auth = (req, res, next) => {
+  if (req.session?.user) return next();
+  res.redirect('/login');
+};
 
-// Login page
+// Rutas
+app.get('/api/status', (req, res) => res.json({ status: 'ok' }));
+
 app.get('/login', (req, res) => {
-  try {
-    const html = fs.readFileSync(path.join(__dirname, 'login.html'), 'utf8');
-    res.send(html);
-  } catch (e) {
-    res.send('<h1>Login</h1><p>Error loading login page</p>');
-  }
+  res.type('html').send(fs.readFileSync(path.join(__dirname, 'login.html'), 'utf8'));
 });
 
-// Login API
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
-  if (username && password && VALID_USERS[username] === password) {
+  if (credentials[username] === password) {
     req.session.user = { username };
-    res.json({ success: true });
+    req.session.save((err) => {
+      if (err) {
+        res.status(500).json({ error: 'Session error' });
+      } else {
+        res.json({ success: true });
+      }
+    });
   } else {
     res.status(401).json({ error: 'Invalid credentials' });
   }
 });
 
-// Logout
 app.get('/api/logout', (req, res) => {
   req.session.destroy();
   res.json({ success: true });
 });
 
-// Dashboard (protected)
-app.get('/', requireLogin, (req, res) => {
-  try {
-    const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
-    res.send(html);
-  } catch (e) {
-    res.send('<h1>Dashboard</h1><p>Error loading dashboard</p>');
-  }
+app.get('/', auth, (req, res) => {
+  res.type('html').send(fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8'));
 });
 
-// Static files (simple approach)
+// Archivos estÃ¡ticos simples
 app.get('/Grifols-logo.svg', (req, res) => {
-  try {
-    res.sendFile(path.join(__dirname, 'Grifols-logo.svg'));
-  } catch (e) {
-    res.status(404).send('Not found');
-  }
+  res.sendFile(path.join(__dirname, 'Grifols-logo.svg')).catch(() => res.status(404).end());
 });
 
 app.get('/Grifols-logo.png', (req, res) => {
-  try {
-    res.sendFile(path.join(__dirname, 'Grifols-logo.png'));
-  } catch (e) {
-    res.status(404).send('Not found');
-  }
+  res.sendFile(path.join(__dirname, 'Grifols-logo.png')).catch(() => res.status(404).end());
 });
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'Not found' });
-});
+app.use(auth, express.static(__dirname));
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, '0.0.0.0', () => console.log(`Server ready on port ${PORT}`));
