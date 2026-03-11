@@ -1,0 +1,16 @@
+{
+  "name": "Grifols Donor Data Journey Dashboard",
+  "short_name": "Donor Dashboard",
+  "description": "Interactive dashboard for visualizing donor data journey across different regions",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3498db",
+  "icons": [
+    {
+      "src": "Grifols-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
