@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "node server.js",
+    "start": "cross-env NODE_ENV=production node server.js",
+    "server-dev": "cross-env NODE_ENV=development node server.js",
+    "server-prod": "cross-env NODE_ENV=production node server.js",
     "electron": "electron .",
-    "electron-dev": "electron ."
+    "electron-dev": "electron .",
+    "package": "electron-packager . DonorDashboard --platform=win32 --arch=x64 --out=release --overwrite"
   },
   "dependencies": {
     "express": "^4.18.2",
