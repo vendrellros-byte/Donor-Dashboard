@@ -64,8 +64,11 @@ app.get('/api/logout', (req, res) => {
 });
 
 app.get('/', auth, (req, res) => {
-  res.type('html').send(fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8'));
+  res.type('html').send(fs.readFileSync(path.join(__dirname, 'dist/index.html'), 'utf8'));
 });
+
+// Servir assets desde dist
+app.use('/assets', express.static(path.join(__dirname, 'dist/assets')));
 
 // Archivos estÃ¡ticos simples
 app.get('/Grifols-logo.svg', (req, res) => {
@@ -76,6 +79,9 @@ app.get('/Grifols-logo.png', (req, res) => {
   res.sendFile(path.join(__dirname, 'Grifols-logo.png')).catch(() => res.status(404).end());
 });
 
-app.use(auth, express.static(__dirname));
+// Fallback para rutas no encontradas (para SPA)
+app.use(auth, (req, res) => {
+  res.type('html').send(fs.readFileSync(path.join(__dirname, 'dist/index.html'), 'utf8'));
+});
 
 app.listen(PORT, '0.0.0.0', () => console.log(`Server ready on port ${PORT}`));
