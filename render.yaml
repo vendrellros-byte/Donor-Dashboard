@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: donor-dashboard
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run server-prod
+    healthCheckPath: /api/status
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ADMIN_USER
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
