@@ -3,26 +3,22 @@ import session from 'express-session';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import fs from 'fs';
 
-// Cargar variables de entorno
 dotenv.config();
 
 const app = express();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Credenciales
 const VALID_USERS = {
   [process.env.ADMIN_USER || 'admin']: process.env.ADMIN_PASSWORD || 'admin123'
 };
 
-// Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// ConfiguraciÃ³n de sesiones seguras
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-super-secret-key-change-in-production',
+  secret: process.env.SESSION_SECRET || 'secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -32,79 +28,79 @@ app.use(session({
   }
 }));
 
-// Middleware de autenticaciÃ³n
 const requireLogin = (req, res, next) => {
-  if (req.session && req.session.user) {
+  if (req.session?.user) {
     next();
   } else {
     res.redirect('/login');
   }
 };
 
-// Health check para Render
+// Health check
 app.get('/api/status', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date() });
+  res.json({ status: 'ok' });
 });
 
-// Rutas de autenticaciÃ³n (pÃºblicas)
+// Login page
 app.get('/login', (req, res) => {
   try {
-    res.sendFile(path.join(__dirname, 'login.html'));
-  } catch (err) {
-    res.status(404).send('Login page not found');
+    const html = fs.readFileSync(path.join(__dirname, 'login.html'), 'utf8');
+    res.send(html);
+  } catch (e) {
+    res.send('<h1>Login</h1><p>Error loading login page</p>');
   }
 });
 
+// Login API
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
-
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Usuario y contraseÃ±a requeridos' });
-  }
-
-  if (VALID_USERS[username] && VALID_USERS[username] === password) {
-    req.session.user = { username, loginTime: new Date() };
-    res.json({ success: true, redirect: '/' });
-  } else {
-    res.status(401).json({ error: 'Credenciales invÃ¡lidas' });
-  }
-});
-
-app.get('/api/logout', (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({ error: 'Error al cerrar sesiÃ³n' });
-    }
+  if (username && password && VALID_USERS[username] === password) {
+    req.session.user = { username };
     res.json({ success: true });
-  });
+  } else {
+    res.status(401).json({ error: 'Invalid credentials' });
+  }
 });
 
-// Archivos estÃ¡ticos pÃºblicos (antes de autenticaciÃ³n)
-app.use(express.static(__dirname, {
-  index: false,
-  ignore: ['server.js', '.env', '.env.*', 'node_modules', 'dist', 'upload-to-github.ps1']
-}));
+// Logout
+app.get('/api/logout', (req, res) => {
+  req.session.destroy();
+  res.json({ success: true });
+});
 
-// Ruta raÃ­z protegida
+// Dashboard (protected)
 app.get('/', requireLogin, (req, res) => {
   try {
-    res.sendFile(path.join(__dirname, 'index.html'));
-  } catch (err) {
-    res.status(404).send('Dashboard not found');
+    const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+    res.send(html);
+  } catch (e) {
+    res.send('<h1>Dashboard</h1><p>Error loading dashboard</p>');
   }
 });
 
-// Manejo de errores
-app.use((err, req, res, next) => {
-  console.error('Error:', err.message);
-  res.status(500).json({ error: 'Error interno del servidor' });
+// Static files (simple approach)
+app.get('/Grifols-logo.svg', (req, res) => {
+  try {
+    res.sendFile(path.join(__dirname, 'Grifols-logo.svg'));
+  } catch (e) {
+    res.status(404).send('Not found');
+  }
 });
 
-// Puerto
-const PORT = process.env.PORT || 3000;
+app.get('/Grifols-logo.png', (req, res) => {
+  try {
+    res.sendFile(path.join(__dirname, 'Grifols-logo.png'));
+  } catch (e) {
+    res.status(404).send('Not found');
+  }
+});
 
-// Iniciar servidor
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`ðŸ”’ Servidor ejecutÃ¡ndose en puerto ${PORT}`);
-  console.log(`ðŸ“ URL: http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
