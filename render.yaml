@@ -4,7 +4,7 @@ services:
     env: node
     plan: free
     buildCommand: npm install
-    startCommand: npm run server-prod
+    startCommand: npm start
     healthCheckPath: /api/status
     envVars:
       - key: NODE_ENV
