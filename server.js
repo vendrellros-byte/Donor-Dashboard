@@ -20,7 +20,7 @@ app.use(session({
     httpOnly: true, 
     maxAge: 24 * 60 * 60 * 1000,
     sameSite: 'lax',
-    secure: false  // Render maneja HTTPS automÃ¡ticamente
+    secure: false
   }
 }));
 
@@ -35,7 +35,7 @@ const auth = (req, res, next) => {
   res.redirect('/login');
 };
 
-// Rutas
+// Rutas de autenticaciÃ³n (pÃºblicas)
 app.get('/api/status', (req, res) => res.json({ status: 'ok' }));
 
 app.get('/login', (req, res) => {
@@ -63,14 +63,9 @@ app.get('/api/logout', (req, res) => {
   res.json({ success: true });
 });
 
-app.get('/', auth, (req, res) => {
-  res.type('html').send(fs.readFileSync(path.join(__dirname, 'dist/index.html'), 'utf8'));
-});
-
-// Servir assets desde dist
+// Servir assets pÃºblicos (CSS, JS, imÃ¡genes)
 app.use('/assets', express.static(path.join(__dirname, 'dist/assets')));
 
-// Archivos estÃ¡ticos simples
 app.get('/Grifols-logo.svg', (req, res) => {
   res.sendFile(path.join(__dirname, 'Grifols-logo.svg')).catch(() => res.status(404).end());
 });
@@ -79,7 +74,16 @@ app.get('/Grifols-logo.png', (req, res) => {
   res.sendFile(path.join(__dirname, 'Grifols-logo.png')).catch(() => res.status(404).end());
 });
 
-// Fallback para rutas no encontradas (para SPA)
+app.get('/manifest.json', (req, res) => {
+  res.type('json').send(fs.readFileSync(path.join(__dirname, 'dist/assets/manifest-C1FjQeLr.json'), 'utf8'));
+});
+
+// Ruta raÃ­z protegida - sirve dashboard compilado
+app.get('/', auth, (req, res) => {
+  res.type('html').send(fs.readFileSync(path.join(__dirname, 'dist/index.html'), 'utf8'));
+});
+
+// Fallback para SPA - cualquier ruta desconocida protegida sirve el index.html
 app.use(auth, (req, res) => {
   res.type('html').send(fs.readFileSync(path.join(__dirname, 'dist/index.html'), 'utf8'));
 });
